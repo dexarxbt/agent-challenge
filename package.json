@@ -1,0 +1,22 @@
+{
+  "name": "solscout",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "On-chain intelligence agent powered by ElizaOS and Nosana — tracks smart money, analyzes tokens, and profiles wallets on Solana.",
+  "scripts": {
+    "start": "elizaos start --character ./characters/solana-whale.agent.json",
+    "dev": "elizaos dev --character ./characters/solana-whale.agent.json",
+    "ui": "node server.js",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@elizaos/core": "^1.7.2",
+    "@elizaos/plugin-bootstrap": "^1.7.2",
+    "@elizaos/plugin-openai": "^1.6.0"
+  },
+  "devDependencies": {
+    "@elizaos/cli": "^1.7.2",
+    "typescript": "^5.0.0"
+  }
+}
