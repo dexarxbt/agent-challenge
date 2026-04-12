@@ -1,17 +1,14 @@
 {
   "name": "SolScout",
   "username": "solscout",
-  "model": "Qwen3.5-27B-AWQ-4bit",
-  "modelProvider": "openai",
   "settings": {
     "model": "Qwen3.5-27B-AWQ-4bit",
-    "modelProvider": "openai",
     "secrets": {},
     "voice": {
       "model": "en_US-male-medium"
     }
   },
-  "plugins": [
+    "plugins": [
     "@elizaos/plugin-bootstrap",
     "@elizaos/plugin-openai"
   ],
