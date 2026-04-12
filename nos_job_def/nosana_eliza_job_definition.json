@@ -9,11 +9,11 @@
       "type": "container/run",
       "id": "solscout-agent",
       "args": {
-        "image": "yourusername/solscout:latest",
+        "image": "dexarxbt/solscout:latest",
         "ports": ["3000:3000"],
         "env": {
           "OPENAI_API_KEY": "nosana",
-          "OPENAI_API_URL": "https://6vq2bcqphcansrs9b88ztxfs88oqy7etah2ugudytv2x.node.k8s.prd.nos.ci/v1",
+          "OPENAI_BASE_URL": "https://5i8frj7ann99bbw9gzpprvzj2esugg39hxbb4unypskq.node.k8s.prd.nos.ci/v1",
           "OPENAI_EMBEDDING_URL": "https://4yiccatpyxx773jtewo5ccwhw1s2hezq5pehndb6fcfq.node.k8s.prd.nos.ci/v1",
           "OPENAI_EMBEDDING_API_KEY": "nosana",
           "OPENAI_EMBEDDING_MODEL": "Qwen3-Embedding-0.6B",
