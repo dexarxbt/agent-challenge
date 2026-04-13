@@ -3,7 +3,6 @@
 .gitignore
 
 # Node
-node_modules
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -49,3 +48,12 @@ coverage/
 .nyc_output/
 *.test.js
 *.spec.js
+
+# Exclude Windows/local node_modules to avoid binary conflicts
+node_modules/
+node_modules
+
+# Exclude local database and large runtime states
+.eliza/
+.elizadb/
+models/

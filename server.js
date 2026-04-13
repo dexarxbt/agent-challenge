@@ -56,25 +56,40 @@ const server = createServer((req, res) => {
   }
 
   // Proxy API requests to ElizaOS (running on port 3000)
-  if (req.url?.startsWith('/api/') || req.url?.startsWith('/message')) {
-    const elizaUrl = `http://localhost:3000${req.url}`;
-    fetch(elizaUrl, {
-      method: req.method,
-      headers: {
-        'Content-Type': 'application/json',
-        ...Object.fromEntries(Object.entries(req.headers).filter(([k]) => !['host', 'content-length'].includes(k.toLowerCase()))),
-      },
-      body: req.method !== 'GET' && req.method !== 'HEAD' ? req : undefined,
-    })
-      .then(async (proxyRes) => {
-        const body = await proxyRes.text();
-        res.writeHead(proxyRes.status, { 'Content-Type': 'application/json' });
-        res.end(body);
-      })
-      .catch(() => {
-        res.writeHead(502, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'ElizaOS backend unavailable' }));
-      });
+  const isApiRoute = req.url === '/agents' || req.url.includes('/message') || req.url.startsWith('/api/');
+  
+  if (isApiRoute) {
+    // Force IPv4 (127.0.0.1) instead of localhost to prevent Node 18+ returning ECONNREFUSED on IPv6 (::1)
+    const elizaUrl = `http://127.0.0.1:3000${req.url}`;
+    
+    // Node.js native fetch requires us to consume the request stream first
+    const chunks = [];
+    req.on('data', chunk => chunks.push(chunk));
+    req.on('end', () => {
+      const bodyBuffer = Buffer.concat(chunks);
+      const reqInit = {
+        method: req.method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...Object.fromEntries(Object.entries(req.headers).filter(([k]) => !['host', 'content-length'].includes(k.toLowerCase()))),
+        }
+      };
+      
+      if (req.method !== 'GET' && req.method !== 'HEAD' && bodyBuffer.length > 0) {
+        reqInit.body = bodyBuffer;
+      }
+
+      fetch(elizaUrl, reqInit)
+        .then(async (proxyRes) => {
+          const body = await proxyRes.text();
+          res.writeHead(proxyRes.status, { 'Content-Type': 'application/json' });
+          res.end(body);
+        })
+        .catch(() => {
+          res.writeHead(502, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'ElizaOS backend unavailable' }));
+        });
+    });
     return;
   }
 

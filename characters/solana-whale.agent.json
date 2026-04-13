@@ -8,6 +8,9 @@
       "model": "en_US-male-medium"
     }
   },
+  "clients": [
+    "direct"
+  ],
   "plugins": [
     "@elizaos/plugin-bootstrap",
     "@elizaos/plugin-openai"

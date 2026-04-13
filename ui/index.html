@@ -9,7 +9,21 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 </head>
 <body>
-  <div class="app">
+  <!-- CINEMATIC BOOT LOADER -->
+  <div id="boot-loader" class="boot-loader">
+    <div class="glitch-container">
+      <div class="glitch-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l3-6 3 12 2-6"/></svg>
+      </div>
+      <h1 class="glitch-text" data-text="SOLSCOUT">SOLSCOUT</h1>
+      <div class="boot-terminal">
+        <p id="boot-status">INITIALIZING NEURAL LINK...</p>
+        <div class="progress-bar"><div class="progress-fill"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app" style="display: none;" id="main-app">
     <!-- LEFT SIDEBAR — Navigation + tracked wallets -->
     <aside class="sidebar">
       <div class="sidebar-header">

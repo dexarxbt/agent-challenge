@@ -9,21 +9,70 @@
 // ─────────────────────────────────────────────────────
 // State
 // ─────────────────────────────────────────────────────
-const API_BASE = window.location.origin;
+let API_BASE = window.location.origin;
+// Try to hit the backend directly if it's on localhost, bypassing node proxy bottlenecks
+const DIRECT_BACKEND = 'http://127.0.0.1:3000';
 let watchlist = [];
 let activityChart = null;
 
 // ─────────────────────────────────────────────────────
-// DOM Ready
+// DOM Ready & Boot Sequence
 // ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  runCinematicBootSequence();
+});
+
+function runCinematicBootSequence() {
+  const statusEl = document.getElementById('boot-status');
+  const fillEl = document.querySelector('.progress-fill');
+  const messages = [
+    "INITIALIZING NEURAL LINK...",
+    "CONNECTING TO NOSANA COMPUTE...",
+    "ESTABLISHING SECURE CONNECTION...",
+    "LOADING SOLANA RPC ENDPOINTS...",
+    "WAKING UP AI AGENT...",
+    "SYSTEM READY."
+  ];
+  
+  let i = 0;
+  let progress = 0;
+  
+  const interval = setInterval(() => {
+    progress += Math.random() * 15;
+    if (progress > 100) progress = 100;
+    fillEl.style.width = `${progress}%`;
+    
+    if (progress > i * 20 && i < messages.length) {
+      statusEl.textContent = messages[i];
+      i++;
+    }
+    
+    if (progress === 100) {
+      clearInterval(interval);
+      setTimeout(() => {
+        document.getElementById('boot-loader').classList.add('hidden');
+        document.getElementById('main-app').style.display = 'grid';
+        
+        // Add staggering drop-in animations
+        document.querySelectorAll('.view-header, .stat-card, .panel, .sidebar-section, .nav-item').forEach((el, i) => {
+          el.style.animationDelay = `${i * 0.05}s`;
+          el.classList.add('animate-in');
+        });
+
+        initApp();
+      }, 500);
+    }
+  }, 150);
+}
+
+function initApp() {
   initNavigation();
   initChat();
   initWalletManager();
   initTokenAnalyzer();
   initDashboard();
   loadWatchlist();
-});
+}
 
 // ─────────────────────────────────────────────────────
 // Navigation
@@ -320,49 +369,91 @@ async function sendMessageToAgent(text) {
   const container = document.getElementById('chat-messages');
   if (container) container.appendChild(loadingDiv);
 
+  // Generate valid dummy UUIDs because ElizaOS strictly validates UUID formats for DB insertion
+  const payload = {
+    text: text,
+    userId: '11111111-1111-1111-1111-111111111111',
+    user: '11111111-1111-1111-1111-111111111111',
+    userName: 'User',
+    roomId: '22222222-2222-2222-2222-222222222222'
+  };
+
+  let success = false;
+  let reply = '';
+  // Try to find the exact dynamic Agent ID assigned by the backend
+  let agentId = null;
+
   try {
-    // ElizaOS v2 direct API
-    const response = await fetch(`${API_BASE}/api/agent/message`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, agentId: 'default' }),
-    });
-
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
-
-    const data = await response.json();
-    const reply = data?.text || data?.reply || data?.[0]?.text || '[No response received]';
-
-    // Remove loading
-    if (container && container.contains(loadingDiv)) {
-      container.removeChild(loadingDiv);
+    // Check both proxy and direct ElizaOS local server
+    const discoverEndpoints = [`${DIRECT_BACKEND}/agents`, `${API_BASE}/agents`, `${API_BASE}/api/agents`];
+    for (const d of discoverEndpoints) {
+      if (agentId) break;
+      try {
+        const res = await fetch(d);
+        if (!res.ok) continue;
+        const cType = res.headers.get("content-type");
+        if (cType && cType.includes("application/json")) {
+          const js = await res.json();
+          const list = js.agents || js;
+          if (list && list.length > 0) agentId = list[0].id || list[0];
+        }
+      } catch (e) {}
     }
 
+    // Now try messaging endpoints - trying Direct CORS first, then Proxy
+    const endpointsToTry = [];
+    if (agentId) {
+      endpointsToTry.push(`${DIRECT_BACKEND}/${agentId}/message`);
+      endpointsToTry.push(`${API_BASE}/${agentId}/message`);
+    }
+    
+    // Bruteforce bypass paths directly to port 3000
+    endpointsToTry.push(`${DIRECT_BACKEND}/SolScout/message`);
+    endpointsToTry.push(`${DIRECT_BACKEND}/solana-whale/message`);
+    endpointsToTry.push(`${DIRECT_BACKEND}/message`);
+    
+    // Bruteforce via the local proxy
+    endpointsToTry.push(`${API_BASE}/SolScout/message`);
+    endpointsToTry.push(`${API_BASE}/solana-whale/message`);
+    endpointsToTry.push(`${API_BASE}/message`);
+    endpointsToTry.push(`${API_BASE}/api/agent/message`);
+
+    for (const endpoint of endpointsToTry) {
+      if (success) break;
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) continue;
+
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) continue;
+
+        const data = await response.json();
+        reply = data?.[0]?.text || data?.text || data?.reply;
+
+        if (reply) {
+          success = true;
+          if (!agentId && endpoint.includes('/message') && !endpoint.endsWith('/message')) {
+            agentId = endpoint.split('/').slice(-2, -1)[0];
+          }
+        }
+      } catch (err) {}
+    }
+  } catch (err) {}
+
+  if (container && container.contains(loadingDiv)) {
+    container.removeChild(loadingDiv);
+  }
+
+  if (success && reply) {
     appendChatMessage('ai', reply);
-
-  } catch (err) {
-    // Try alternative ElizaOS endpoint
-    try {
-      const response2 = await fetch(`${API_BASE}/message`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, roomId: 'default' }),
-      });
-
-      const fallbackData = await response2.json();
-      const reply = fallbackData?.[0]?.text || fallbackData?.text || JSON.stringify(fallbackData);
-
-      if (container && container.contains(loadingDiv)) {
-        container.removeChild(loadingDiv);
-      }
-
-      appendChatMessage('ai', reply);
-    } catch {
-      if (container && container.contains(loadingDiv)) {
-        container.removeChild(loadingDiv);
-      }
-      appendChatMessage('ai', `Agent connection unavailable — the ElizaOS server needs to be running. Try: \`elizaos dev\`\n\nIn production this connects to the Nosana deployment endpoint.`);
-    }
+  } else {
+    addAlert(`Agent API endpoints failed: Unable to route [AgentID=${agentId || 'Unknown'}]`, 'warn');
+    appendChatMessage('ai', `Connection blocked — I am unable to map my UI to the ElizaOS message endpoint. Please verify the backend is running correctly.`);
   }
 }
 
