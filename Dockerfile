@@ -1,14 +1,10 @@
-# syntax=docker/dockerfile:1
+FROM node:23-alpine AS base
 
-FROM node:23-slim AS base
+# Install bash only
+RUN apk add --no-cache bash
 
-# Install system dependencies needed for native modules (e.g. better-sqlite3)
-RUN apt-get update && apt-get install -y \
-  python3 \
-  make \
-  g++ \
-  git \
-  && rm -rf /var/lib/apt/lists/*
+# Install bun via npm (no GitHub download needed)
+RUN npm install -g bun
 
 # Disable telemetry
 ENV ELIZAOS_TELEMETRY_DISABLED=true
@@ -16,18 +12,8 @@ ENV DO_NOT_TRACK=1
 
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
-
-# Copy package manifest and install dependencies
-COPY package.json ./
-RUN pnpm install
-
-# Copy all source files
+# Copy everything including your local node_modules
 COPY . .
-
-# Create data directory for SQLite and watchlists
-RUN mkdir -p /app/data
 
 EXPOSE 3000
 
